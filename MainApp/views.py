@@ -5,11 +5,11 @@ from django.contrib.auth.models import User
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth import login, authenticate
 
-from django.views.generic import View
 from django.views.generic.edit import CreateView
-
 from django.contrib.auth.decorators import login_required
 from django.urls import reverse_lazy
+from django.views.generic.edit import FormView
+from .forms import ContactForm
 
 
 def ajax_validate(request):
@@ -32,12 +32,28 @@ def MainPage(request):
 class SignUpView(CreateView):
     template_name = 'signup.html'
     form_class = UserCreationForm
+
+    def form_valid(self, form):
+        username = form.cleaned_data['username']
+        password = form.cleaned_data['password1']
+        form.save()
+        user = authenticate(self.request, username=username, password=password)
+        login(self.request, user)
+        return redirect('/home/')
+
+
+class ContactPage(FormView):
+    template_name = 'contactpage.html'
+    form_class = ContactForm
     success_url = reverse_lazy('home')
 
     def form_valid(self, form):
-        valid = super().form_valid(form)
-        print(self.request)
-        print(self.object)
-        login(self.request, self.object)
-        return valid
+        name = form.cleaned_data['name']
+        form.save()
+        #return JsonResponse({'name': name}, status=200)
+        return super().form_valid(form)
+
+    def form_invalid(self, form):
+        errors = form.errors.as_json()
+        return JsonResponse({'errors': errors}, status=400)
 
